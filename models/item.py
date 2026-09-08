@@ -1,17 +1,20 @@
-from db import db
+from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from db import Base, session
 
 
-class ItemModel(db.Model):
+class ItemModel(Base):
     __tablename__ = "items"
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
-    price = db.Column(db.Float(precision=2))
-    image = db.Column(db.String(80))
-    description = db.Column(db.String(240))
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80))
+    price = Column(Float(precision=2))
+    image = Column(String(80))
+    description = Column(String(240))
 
-    store_id = db.Column(db.Integer, db.ForeignKey("stores.id"))
-    store = db.relationship("StoreModel")
+    store_id = Column(Integer, ForeignKey("stores.id"))
+    store = relationship("StoreModel")
 
     def __init__(self, name, price, store_id, description, image):
         self.name = name
@@ -31,16 +34,16 @@ class ItemModel(db.Model):
 
     @classmethod
     def find_by_name(cls, name):
-        return cls.query.filter_by(name=name).first()
+        return session.query(cls).filter_by(name=name).first()
 
     @classmethod
     def find_by_id(cls, _id):
-        return cls.query.filter_by(id=_id).first()
+        return session.query(cls).filter_by(id=_id).first()
 
     def save_to_db(self):
-        db.session.add(self)
-        db.session.commit()
+        session.add(self)
+        session.commit()
 
     def delete_from_db(self):
-        db.session.delete(self)
-        db.session.commit()
+        session.delete(self)
+        session.commit()

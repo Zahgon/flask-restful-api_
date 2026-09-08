@@ -1,16 +1,22 @@
-from db import db
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from db import Base, session
 
 
-class UserInfoModel(db.Model):
+class UserInfoModel(Base):
     __tablename__ = "users_info"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    street = db.Column(db.String(20))
-    city = db.Column(db.String(20))
-    home_number = db.Column(db.Integer)
-    phone = db.Column(db.String(20))
-    email = db.Column(db.String(20))
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("UserModel")
+
+    street = Column(String(20))
+    city = Column(String(20))
+    home_number = Column(Integer)
+    phone = Column(String(20))
+    email = Column(String(20))
 
     def __init__(self, user_id, address, phone, email):
         self.user_id = user_id
@@ -30,17 +36,13 @@ class UserInfoModel(db.Model):
         }
 
     @classmethod
-    def find_by_name(cls, name):
-        return cls.query.filter_by(name=name).first()
-
-    @classmethod
     def find_by_id(cls, _id):
-        return cls.query.filter_by(user_id=_id).first()
+        return session.query(cls).filter_by(user_id=_id).first()
 
     def save_to_db(self):
-        db.session.add(self)
-        db.session.commit()
+        session.add(self)
+        session.commit()
 
     def delete_from_db(self):
-        db.session.delete(self)
-        db.session.commit()
+        session.delete(self)
+        session.commit()

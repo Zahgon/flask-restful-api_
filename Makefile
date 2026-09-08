@@ -1,8 +1,8 @@
 lint:
-	@pre-commit run --all-files
+	pre-commit run --all-files
 
 start:
-	python app.py
+	python -m uvicorn run:app --host 0.0.0.0 --port 5000
 
 test:
-	@pytest tests/api -q
+	pytest tests -q

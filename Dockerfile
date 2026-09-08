@@ -1,19 +1,16 @@
-ENV PIP_DISABLE_PIP_VERSION_CHECK=on
-RUN pip install poetry
+FROM python:3.12-slim
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
-COPY poetry.lock pyproject.toml /app/
 
-# 1. Install project dependencies
-RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 2. Feature-parity with node.js base images.
-RUN apt-get update && apt-get install -y --no-install-recommends git ssh
+COPY . .
 
-# 3. Add tools
-RUN apt-get update && apt-get install -y \
-curl
-RUN apt-get install unzip
+EXPOSE 5000
 
-COPY . /app
-CMD [ "python", "app.py"]
+CMD ["python", "-m", "uvicorn", "run:app", "--host", "0.0.0.0", "--port", "5000"]

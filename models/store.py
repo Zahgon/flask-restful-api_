@@ -1,13 +1,16 @@
-from db import db
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+
+from db import Base, session
 
 
-class StoreModel(db.Model):
+class StoreModel(Base):
     __tablename__ = "stores"
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80))
 
-    items = db.relationship("ItemModel", lazy="dynamic")
+    items = relationship("ItemModel", lazy="dynamic")
 
     def __init__(self, name):
         self.name = name
@@ -21,12 +24,12 @@ class StoreModel(db.Model):
 
     @classmethod
     def find_by_name(cls, name):
-        return cls.query.filter_by(name=name).first()
+        return session.query(cls).filter_by(name=name).first()
 
     def save_to_db(self):
-        db.session.add(self)
-        db.session.commit()
+        session.add(self)
+        session.commit()
 
     def delete_from_db(self):
-        db.session.delete(self)
-        db.session.commit()
+        session.delete(self)
+        session.commit()

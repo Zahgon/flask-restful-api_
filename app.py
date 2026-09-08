@@ -1,48 +1,64 @@
-from flask import Flask
-from flask_restful import Api
-from flask_jwt import JWT
+"""FastAPI application.
 
-from resources.balance import Balance
-from resources.pay import Pay
-from resources.user_info import UserInfo
-from security import authenticate, identity
-from resources.user import UserRegister
-from resources.item import Item, ItemList, WelcomeList
-from resources.store import Store, StoreList
-from flask_cors import CORS
+This is the port of the original ``app.py``, which built a ``Flask`` object,
+wrapped it in ``flask_restful.Api``, attached ``flask_jwt.JWT`` and
+``flask_cors.CORS``, and registered nine resources.  The FastAPI equivalents are
+an ``APIRouter`` per resource module, a ``CORSMiddleware``, a session middleware
+that replaces ``flask_sqlalchemy``'s request scoped session, and the error
+handlers in :mod:`errors` that keep the error payloads identical.
 
+Like the original, importing this module does **not** create the database
+schema; ``run.py`` does that.
+"""
 
-app = Flask(__name__)
-cors = CORS(app)
-app.config["CORS_HEADERS"] = "Content-Type"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["PROPAGATE_EXCEPTIONS"] = True
-app.secret_key = "jose"
-api = Api(app)
+import os
 
-jwt = JWT(app, authenticate, identity)  # /auth
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-api.add_resource(Store, "/store/<string:name>")
-api.add_resource(StoreList, "/stores")
-api.add_resource(Item, "/item/<string:name>")
-api.add_resource(ItemList, "/items")
-api.add_resource(UserRegister, "/register")
-api.add_resource(Balance, "/balance/<int:uuid>")
-api.add_resource(Pay, "/pay/<int:uuid>")
-api.add_resource(UserInfo, "/user_info/<int:uuid>")
-api.add_resource(WelcomeList, "/")
+import db
+from db import SessionMiddleware
+from errors import register_error_handlers
+from resources.auth import router as auth_router
+from resources.balance import router as balance_router
+from resources.item import router as item_router
+from resources.item import welcome_router
+from resources.pay import router as pay_router
+from resources.store import router as store_router
+from resources.user import router as user_router
+from resources.user_info import router as user_info_router
+from security import SECRET_KEY
 
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-if __name__ == "__main__":
-    from db import db
+CORS_HEADERS = "Content-Type"
+SQLALCHEMY_DATABASE_URI = "sqlite:///data.db"
 
-    db.init_app(app)
+db.init_engine(db.resolve_database_uri(SQLALCHEMY_DATABASE_URI, ROOT_PATH))
 
-    if app.config["DEBUG"]:
+app = FastAPI(
+    title="flask-restful-api",
+    description="REST API for a small store, ported from Flask to FastAPI.",
+    version="0.1.0",
+)
+app.state.secret_key = SECRET_KEY
 
-        @app.before_first_request
-        def create_tables():
-            db.create_all()
+app.add_middleware(SessionMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=[CORS_HEADERS],
+)
 
-    app.run(port=5000)
+register_error_handlers(app)
+
+app.include_router(store_router)
+app.include_router(item_router)
+app.include_router(user_router)
+app.include_router(balance_router)
+app.include_router(pay_router)
+app.include_router(user_info_router)
+app.include_router(auth_router)
+app.include_router(welcome_router)

@@ -1,60 +1,50 @@
 # Third party modules
+import os
+
 import pytest
 
 # First party modules
-# from app2 import create_app
+from fastapi import FastAPI
+from starlette.testclient import TestClient
 
+import db
+from db import SessionMiddleware
+from errors import register_error_handlers
+from resources.auth import router as auth_router
+from resources.balance import router as balance_router
+from resources.item import router as item_router
+from resources.pay import router as pay_router
+from resources.store import router as store_router
+from resources.user import router as user_router
+from resources.user_info import router as user_info_router
 
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-from resources.balance import Balance
-from resources.item import Item, ItemList
-from resources.pay import Pay
-from resources.store import Store, StoreList
-from resources.user import UserRegister
-from resources.user_info import UserInfo
-from security import authenticate, identity
-from flask_restful import Api
-from flask_jwt import JWT
-
-
-db = SQLAlchemy()
+SQLALCHEMY_DATABASE_URI = "sqlite:///data.db"
 
 
 def create_app():
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["PROPAGATE_EXCEPTIONS"] = True
-    app.secret_key = "jose"
-    api = Api(app)
+    app = FastAPI()
+    app.add_middleware(SessionMiddleware)
+    register_error_handlers(app)
 
-    JWT(app, authenticate, identity)  # /auth
+    app.include_router(auth_router)  # /auth
 
-    api.add_resource(Store, "/store/<string:name>")
-    api.add_resource(StoreList, "/stores")
-    api.add_resource(Item, "/item/<string:name>")
-    api.add_resource(ItemList, "/items")
-    api.add_resource(UserRegister, "/register")
-    api.add_resource(Balance, "/balance/<int:uuid>")
-    api.add_resource(Pay, "/pay/<int:uuid>")
-    api.add_resource(UserInfo, "/user_info/<int:uuid>")
+    app.include_router(store_router)  # /store/{name} and /stores
+    app.include_router(item_router)  # /item/{name} and /items
+    app.include_router(user_router)  # /register
+    app.include_router(balance_router)  # /balance/{uuid}
+    app.include_router(pay_router)  # /pay/{uuid}
+    app.include_router(user_info_router)  # /user_info/{uuid}
     return app
 
 
 @pytest.fixture
 def client():
     app = create_app()
-    from db import db
 
-    db.init_app(app)
+    db.init_engine(db.resolve_database_uri(SQLALCHEMY_DATABASE_URI, ROOT_PATH))
+    db.create_all()
 
-    @app.before_first_request
-    def create_tables():
-        db.create_all()
-
-    app.config["TESTING"] = True
-    app.config["DEBUG"] = True
-    with app.test_client() as client:
+    with TestClient(app) as client:
         yield client

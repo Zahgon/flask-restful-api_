@@ -1,6 +1,5 @@
-#!/bin/bash
-app="flask-api-test"
-docker build -t ${app} .
-docker run -d -p 56733:80 \
-  --name=${app} \
-  -v $PWD:/app ${app}
+#!/usr/bin/env bash
+set -e
+
+docker build -t fastapi-api-test .
+docker run --rm -p 56733:5000 fastapi-api-test

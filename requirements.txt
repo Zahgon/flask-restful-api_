@@ -1,8 +1,7 @@
-Flask
-Flask-CORS
-Flask-JWT
-Flask-RESTful
-Flask-SQLAlchemy
-pre-commit
-psycopg2
-uwsgi
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.4
+SQLAlchemy==2.0.36
+PyJWT==2.10.1
+httpx==0.28.1
+pytest==8.3.4
